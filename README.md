@@ -1,5 +1,5 @@
 ## helm-decomposer
-Tool takes Helm package (.tgz) as an input and visualizes hierarchy of dependencies (Helm subcharts and correspondig images) for further analysis.
+The tool takes Helm package (.tgz) as an input and visualizes hierarchy of dependencies (Helm subcharts and correspondig images) for further analysis.
 
 ## Usage
 Currently WIP: 
