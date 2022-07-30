@@ -23,9 +23,10 @@ func main() {
 	fmt.Print(*chart)
 	engine := engine.Engine{Strict: false, LintMode: false}
 
-	// manual values
-	var extraVals map[string]interface{}
-	// extraVals := map[string]interface{}{
+	// Prepare vals
+	var vals map[string]interface{}
+	// To override values
+	// vals := map[string]interface{}{
 	// 	"replicaCount": 3,
 	// }
 
@@ -38,18 +39,18 @@ func main() {
 
 	// Coalesce values
 	// func CoalesceValues(chrt *chart.Chart, vals map[string]interface{}) (Values, error)
-	vals, err := chartutil.CoalesceValues(chart, extraVals)
+	coalescedVals, err := chartutil.CoalesceValues(chart, vals)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("\n===== Helm Values - raw ===========")
-	fmt.Println(reflect.TypeOf(vals))
-	fmt.Println(vals)
+	fmt.Println(reflect.TypeOf(coalescedVals))
+	fmt.Println(coalescedVals)
 	fmt.Println("\n===== Helm Values - in Yaml ===========")
-	fmt.Println(vals.YAML())
+	fmt.Println(coalescedVals.YAML())
 	fmt.Println("\n====== Helm Templating ==========")
 	// func (e Engine) Render(chrt *chart.Chart, values chartutil.Values) (map[string]string, error)
-	fmt.Println(engine.Render(chart, vals))
+	fmt.Println(engine.Render(chart, coalescedVals))
 
 }
