@@ -13,8 +13,9 @@ import (
 
 func main() {
 	//chartPath := "samples/haproxy-0.3.25.tgz"
-	chartPath := "samples/helm1-0.1.0.tgz"
+	//chartPath := "samples/helm1-0.1.0.tgz"
 	//chartPath := "samples/helm1"
+	chartPath := "samples/nifi-1.1.1.tgz"
 
 	fmt.Println("\n===== Load Helm Chart =====")
 	chart, err := loader.Load(chartPath)
@@ -51,15 +52,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	vals2 := chartutil.CoalesceTables(map[string]interface{}{}, vals)
-
 	fmt.Println("\n===== Helm Templating ======")
 
 	// Using Method outputs trailing nil
 	// e := engine.Engine{Strict: false, LintMode: false}
 	// fmt.Println(e.Render(chart, vals))
 
-	m, err := engine.Render(chart, vals2)
+	m, err := engine.Render(chart, vals)
 	if err != nil {
 		log.Fatal(err)
 	}
