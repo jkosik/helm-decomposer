@@ -13,8 +13,8 @@ import (
 
 func main() {
 	//chartPath := "samples/haproxy-0.3.25.tgz"
-	//chartPath := "samples/helm1-0.1.0.tgz"
-	chartPath := "samples/helm1"
+	chartPath := "samples/helm1-0.1.0.tgz"
+	//chartPath := "samples/helm1"
 
 	fmt.Println("\n===== Load Helm Chart =====")
 	chart, err := loader.Load(chartPath)
