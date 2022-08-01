@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -12,10 +13,14 @@ import (
 )
 
 func main() {
-	//chartPath := "samples/haproxy-0.3.25.tgz"
-	//chartPath := "samples/helm1-0.1.0.tgz"
-	//chartPath := "samples/helm1"
-	chartPath := "samples/nifi-1.1.1.tgz"
+
+	log.SetFlags(0) // no timestamp
+	log.SetPrefix(os.Args[0] + ": ")
+
+	if len(os.Args[1:]) != 1 {
+		log.Fatalf("supply a chart file or directory")
+	}
+	chartPath := os.Args[1]
 
 	fmt.Println("\n===== Load Helm Chart =====")
 	chart, err := loader.Load(chartPath)
@@ -52,22 +57,36 @@ func main() {
 		os.Exit(1)
 	}
 
+	// fmt.Println(vals.YAML())
+
 	fmt.Println("\n===== Helm Templating ======")
 
 	// Using Method outputs trailing nil
 	// e := engine.Engine{Strict: false, LintMode: false}
 	// fmt.Println(e.Render(chart, vals))
 
+	// m becomes map[string]string
 	m, err := engine.Render(chart, vals)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(m)
 
+	fmt.Println("\n===== Chart files found =====")
+	// Identify chart's filenames (keys of m)
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 		fmt.Println(k)
 	}
-	fmt.Println(keys)
+
+	fmt.Println("\n===== Searching images in K8S manifests =====\n")
+	// Idenitfy file contents (values of m)
+	for _, k := range keys {
+		if strings.Contains(m[k], "image:") {
+			fmt.Printf("=== Image found in %s ===\n", k)
+			fmt.Println(m[k])
+		}
+	}
+
 }
