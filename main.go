@@ -128,16 +128,29 @@ func main() {
 			// fmt.Println(imageLines)
 			for _, i := range imageLines {
 				image := strings.TrimPrefix(i, "image:")
-				fmt.Println(strings.TrimSpace(image))
+				image = strings.TrimSpace(image)
+				image = strings.Trim(image, "\"")
+				fmt.Println(image)
 			}
 		}
 	}
 
 	fmt.Println("\n===== Visualizing image tree =====\n")
 	fmt.Println(imageKeys)
+
+	chartName := chart.Name()
+	chartDeps := chart.Dependencies()
+
+	fmt.Println(chartName)
+
+	// TODO: check if dep contains dep
+	for _, d := range chartDeps {
+		fmt.Println(d.Name())
+	}
+
 	x := 1
 	helmStruct := tree{
-		0: node{"root", []int{x, 2, 3}},
+		0: node{chartName, []int{x, 2, 3}},
 		1: node{"ei", []int{4, 5}},
 		2: node{"bee", nil},
 		3: node{"si", nil},
