@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
@@ -55,13 +56,13 @@ func main() {
 	chartPath := os.Args[1]
 
 	fmt.Println("\n===== Loading Helm Chart =====")
-	chart, err := loader.Load(chartPath)
+	loadedChart, err := loader.Load(chartPath)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(reflect.TypeOf(chart))
-	// fmt.Print(*chart)
+	fmt.Println(reflect.TypeOf(loadedChart))
+	// fmt.Print(*loadedChart)
 
 	fmt.Println("\n===== Populating Values =====")
 	// var vals chartutil.Values
@@ -72,7 +73,7 @@ func main() {
 
 	// Signature: func CoalesceValues(chrt *chart.Chart, vals map[string]interface{}) (Values, error)
 	// throws nil pointer evaluating interface {}
-	// vals, err := chartutil.CoalesceValues(chart, map[string]interface{}{})
+	// vals, err := chartutil.CoalesceValues(loadedChart, map[string]interface{}{})
 	// if err != nil {
 	// 	panic(err)
 	// }
@@ -80,9 +81,9 @@ func main() {
 
 	releaseOptions := chartutil.ReleaseOptions{Name: "release1", Namespace: "ns1"}
 	// Submitting empty map param {}{}
-	vals, err := chartutil.ToRenderValues(chart, map[string]interface{}{},
+	vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
 		releaseOptions, chartutil.DefaultCapabilities)
-	// vals, err := chartutil.ToRenderValues(chart, map[string]interface{}{},
+	// vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
 	// 	chartutil.ReleaseOptions{}, chartutil.DefaultCapabilities)
 	if err != nil {
 		log.Fatal(err)
@@ -95,11 +96,11 @@ func main() {
 
 	// Alternative to engine.Render function. Using Render Method outputs trailing nil.
 	// e := engine.Engine{Strict: false, LintMode: false}
-	// fmt.Println(e.Render(chart, vals))
+	// fmt.Println(e.Render(loadedChart, vals))
 
 	// Templated Chart represented by "m" (map[string]string)
 	// where keys are the filenames and values are the file contents
-	m, err := engine.Render(chart, vals)
+	m, err := engine.Render(loadedChart, vals)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -136,29 +137,56 @@ func main() {
 	}
 
 	fmt.Println("\n===== Visualizing image tree =====\n")
-	fmt.Println(imageKeys)
 
-	chartName := chart.Name()
-	chartDeps := chart.Dependencies()
+	rootName := loadedChart.Name()
+	rootDeps := loadedChart.Dependencies()
 
-	fmt.Println(chartName)
+	fmt.Println(rootName)
+	fmt.Println(reflect.TypeOf(loadedChart))
+	fmt.Println(reflect.TypeOf(rootDeps))
 
-	// TODO: check if dep contains dep
-	for _, d := range chartDeps {
-		fmt.Println(d.Name())
+	//var fullTree tree
+	// allNodeIDs initialized already and 0 reserved for root. Appending always dummy value "node".
+	// Slice keys represend Node IDs. Length represents Node count.
+	allNodeIDs := []string{"node"} // 0: node, 1: node,...
+	fullTree := tree{{label: loadedChart.Name(), children: []int{}}}
+
+	depRecursion := func(myChart chart.Chart, nodeID int) tree {
+		parent := myChart.Name()
+		chartDeps := myChart.Dependencies()
+		var currentDepsNodeIDs []int
+
+		fmt.Printf("\n ====== Testing parent chart: %s containing %d dependencies.\n", parent, len(chartDeps))
+		fmt.Println("fullTree before:", fullTree)
+
+		// Chart does not have further deps
+		if len(chartDeps) == 0 {
+			return fullTree
+		} else {
+			// root Node already declared, len == 1
+			shift := len(allNodeIDs)
+			for i, dep := range chartDeps {
+				// shifted currentDepsNodeIDs overcome zero-based range indexing
+				currentDepsNodeIDs = append(currentDepsNodeIDs, shift+i) // [1,2,3,4], next parent: [5,6,7]...
+				fmt.Println("currentDepsNodeIDs:", currentDepsNodeIDs)
+				fullTree = append(fullTree, node{label: dep.Name(), children: []int{}})
+				// allNodeIDs grows with every new dependencies. Slice keys represend Node IDs. Length represents Node count.
+				allNodeIDs = append(allNodeIDs, "node")
+				fmt.Println("allNodeIDs length:", len(allNodeIDs))
+			}
+
+			fullTree[nodeID] = node{label: parent, children: currentDepsNodeIDs}
+
+			fmt.Println("fullTree after:", fullTree)
+		}
+
+		return fullTree
 	}
 
-	x := 1
-	helmStruct := tree{
-		0: node{chartName, []int{x, 2, 3}},
-		1: node{"ei", []int{4, 5}},
-		2: node{"bee", nil},
-		3: node{"si", nil},
-		4: node{"dee", nil},
-		5: node{"y", []int{6}},
-		6: node{"eff", nil},
-	}
+	depRecursion(*loadedChart, 0)
 
-	vis(helmStruct)
+	fmt.Println("fullTree: ", fullTree)
+
+	vis(fullTree)
 
 }
