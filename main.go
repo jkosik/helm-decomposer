@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"helm.sh/helm/v3/pkg/chart"
@@ -188,11 +187,6 @@ func main() {
 	}
 
 	depRecursion(*loadedChart, 0)
-
-	// Wait until only parent program is running
-	for runtime.NumGoroutine() > 1 {
-		//fmt.Printf("\Runnint Go routines count: %d ", runtime.NumGoroutine())
-	}
 
 	fmt.Println("\n=== Helm Tree: ===\n")
 	vis(fullTree)
