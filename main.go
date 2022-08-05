@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -48,9 +48,6 @@ func vis(t tree) {
 
 func main() {
 
-	log.SetFlags(0) // no timestamp
-	log.SetPrefix(os.Args[0] + ": ")
-
 	if len(os.Args[1:]) != 1 {
 		log.Fatalf("supply a chart file or directory")
 	}
@@ -62,8 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(reflect.TypeOf(loadedChart))
-	// fmt.Print(*loadedChart)
+	//fmt.Println(reflect.TypeOf(loadedChart))
 
 	fmt.Println("\nPopulating Helm Values...")
 	// var vals chartutil.Values
@@ -88,7 +84,6 @@ func main() {
 	// 	chartutil.ReleaseOptions{}, chartutil.DefaultCapabilities)
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
 	// fmt.Println(vals.YAML())
@@ -103,7 +98,8 @@ func main() {
 	// where keys are the filenames and values are the file contents
 	m, err := engine.Render(loadedChart, vals)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		fmt.Println("\nWARNING: Helm Chart can not be fully templated. Please check values files on all levels, usage of aliases, etc...")
 	}
 	// fmt.Println(m)
 
@@ -161,8 +157,7 @@ func main() {
 
 		// Chart does not have further deps
 		if len(chartDeps) == 0 {
-			fmt.Println("No dependencies found. Returning...")
-			return fullTree
+			fmt.Println("No dependencies found. Continuing...")
 		} else {
 			// root Node already declared, len == 1
 			shift := len(allNodeIDs)
@@ -185,13 +180,18 @@ func main() {
 				fmt.Printf("Recursive search for: %s\n", dep.Name())
 				//fmt.Println(shift + i)
 				go depRecursion(*dep, shift+i)
-				time.Sleep(time.Second)
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 		return fullTree
 	}
 
 	depRecursion(*loadedChart, 0)
+
+	// Wait until only parent program is running
+	for runtime.NumGoroutine() > 1 {
+		//fmt.Printf("\Runnint Go routines count: %d ", runtime.NumGoroutine())
+	}
 
 	fmt.Println("\n=== Helm Tree: ===\n")
 	vis(fullTree)
