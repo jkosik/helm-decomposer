@@ -60,19 +60,6 @@ func main() {
 	//fmt.Println(reflect.TypeOf(loadedChart))
 
 	fmt.Println("\nPopulating Helm Values...")
-	// var vals chartutil.Values
-
-	// vals := chartutil.Values{
-	// 	"replicaCount": 3,
-	// }
-
-	// Signature: func CoalesceValues(chrt *chart.Chart, vals map[string]interface{}) (Values, error)
-	// throws nil pointer evaluating interface {}
-	// vals, err := chartutil.CoalesceValues(loadedChart, map[string]interface{}{})
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(vals.YAML())
 
 	releaseOptions := chartutil.ReleaseOptions{Name: "release1", Namespace: "ns1"}
 	// Submitting empty map param {}{}
@@ -101,30 +88,30 @@ func main() {
 	}
 	// fmt.Println(m)
 
-	fmt.Println("\nChart files found:")
+	fmt.Println("\nBrowsing files found...")
 	// Populate keys (filenames)
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
-		fmt.Println(k)
+		// fmt.Println(k)
 	}
 
 	fmt.Println("\nSearching images in K8S manifests...")
 	// Populate keys (filenames) with "image:" in the file content
-	var imageKeys []string
+	var filesWithImg []string
 	for _, k := range keys {
 		if strings.Contains(m[k], "image:") {
-			imageKeys = append(imageKeys, k)
-			//fmt.Println(m[imageKeys])
+			filesWithImg = append(filesWithImg, k)
+			//fmt.Println(m[filesWithImg])
 
-			re := regexp.MustCompile(`image:.+`)
-			imageLines := re.FindAllString(m[k], -1)
+			re := regexp.MustCompile(`image:.*`)
+			linesWithImg := re.FindAllString(m[k], -1)
 
-			if len(imageLines) != 1 {
+			if len(linesWithImg) > 0 {
 				fmt.Printf("\nImage found in %s...\n", k)
 			}
-			// fmt.Println(imageLines)
-			for _, i := range imageLines {
+			// fmt.Println(linesWithImg)
+			for _, i := range linesWithImg {
 				image := strings.TrimPrefix(i, "image:")
 				image = strings.TrimSpace(image)
 				image = strings.Trim(image, "\"")
@@ -150,12 +137,12 @@ func main() {
 
 		currentDepsNodeIDs = nil
 
-		fmt.Printf("\n=== Parent chart: %s contains %d dependencies. === \n", parent, len(chartDeps))
-		fmt.Println("Tree state:", fullTree)
+		// fmt.Printf("\n=== Parent chart: %s contains %d dependencies. === \n", parent, len(chartDeps))
+		// fmt.Println("Tree state:", fullTree)
 
 		// Chart does not have further deps
 		if len(chartDeps) == 0 {
-			fmt.Println("No dependencies found. Continuing...")
+			// fmt.Println("No dependencies found. Continuing...")
 		} else {
 			// root Node already declared, len == 1
 			shift := len(allNodeIDs)
@@ -168,17 +155,16 @@ func main() {
 				// allNodeIDs grows with every new dependencies. Slice keys represent Node IDs (zero-based). Slice length represents Node count.
 				allNodeIDs = append(allNodeIDs, "node")
 
-				fmt.Printf("New Node \"%s\" (Node ID: %d) added to the Tree. Current Node count: %d \n", dep.Name(), shift+i, len(allNodeIDs))
+				// fmt.Printf("New Node \"%s\" (Node ID: %d) added to the Tree. Current Node count: %d \n", dep.Name(), shift+i, len(allNodeIDs))
 				fullTree = append(fullTree, node{label: dep.Name(), children: []int{}})
 			}
 
-			fmt.Printf("New Tree state: %v \n", fullTree)
+			// fmt.Printf("New Tree state: %v \n", fullTree)
 			fullTree[nodeID] = node{label: parent, children: currentDepsNodeIDs} // NodeID initially passed to the function
-			fmt.Printf("Childrens in Tree updated for Node \"%s\" (Node ID %d): %v \n", parent, nodeID, fullTree)
+			// fmt.Printf("Childrens in Tree updated for Node \"%s\" (Node ID %d): %v \n", parent, nodeID, fullTree)
 
 			for i, dep := range chartDeps {
-				fmt.Printf("Recursive search for: \"%s\", Node ID: %d\n", dep.Name(), shift+i)
-
+				// fmt.Printf("Recursive search for: \"%s\", Node ID: %d\n", dep.Name(), shift+i)
 				depRecursion(*dep, shift+i)
 				//time.Sleep(100 * time.Millisecond)
 			}

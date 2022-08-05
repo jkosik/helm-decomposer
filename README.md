@@ -10,4 +10,6 @@ The tool templates the Helm package (.tgz or untarred folder) identifies all ima
 ## TODO
 - Submitted Helm Chart must be healthy, i.e. Helm templating must end up without any warnings. Edge case hit when Helm chart uses dependency aliases combined with subchart parametrized on parent level only.
 - flags for output files and help
+- flag to run only tree (for Chart that can not tempalte properly)
+- HB does not template with images (even without DL)
 - including images into the visal chart hierarchy 
