@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"time"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -162,25 +161,27 @@ func main() {
 			// root Node already declared, len == 1
 			shift := len(allNodeIDs)
 			for i, dep := range chartDeps {
-				// shifting currentDepsNodeIDs overcomes zero-based range indexing
-				currentDepsNodeIDs = append(currentDepsNodeIDs, shift+i) // [1,2,3,4], next parent: [5,6,7]...
+				// Composing from scratch slice of child Node IDs for the tested parent.
+				// Node ID == Slice KEY IDs for the zer-based Tree which will be submitted to vis().
+				// currentDepsNodeIDs's VALUES are +1 to KEYS from the Tree
+				currentDepsNodeIDs = append(currentDepsNodeIDs, shift+i) // [1,2,3,4], for the next parent: [5,6,7]...
 
-				// allNodeIDs grow with every new dependencies. Slice keys represent Node IDs. Length represents Node count.
+				// allNodeIDs grows with every new dependencies. Slice keys represent Node IDs (zero-based). Slice length represents Node count.
 				allNodeIDs = append(allNodeIDs, "node")
 
-				fmt.Printf("Adding \"%s\" Node to the Tree. Current Node count: %d \n", dep.Name(), len(allNodeIDs))
+				fmt.Printf("New Node \"%s\" (Node ID: %d) added to the Tree. Current Node count: %d \n", dep.Name(), shift+i, len(allNodeIDs))
 				fullTree = append(fullTree, node{label: dep.Name(), children: []int{}})
 			}
 
 			fmt.Printf("New Tree state: %v \n", fullTree)
 			fullTree[nodeID] = node{label: parent, children: currentDepsNodeIDs} // NodeID initially passed to the function
-			fmt.Printf("Children added to the Node in the Tree: %v \n", fullTree)
+			fmt.Printf("Childrens in Tree updated for Node \"%s\" (Node ID %d): %v \n", parent, nodeID, fullTree)
 
 			for i, dep := range chartDeps {
-				fmt.Printf("Recursive search for: %s\n", dep.Name())
-				//fmt.Println(shift + i)
-				go depRecursion(*dep, shift+i)
-				time.Sleep(100 * time.Millisecond)
+				fmt.Printf("Recursive search for: \"%s\", Node ID: %d\n", dep.Name(), shift+i)
+
+				depRecursion(*dep, shift+i)
+				//time.Sleep(100 * time.Millisecond)
 			}
 		}
 		return fullTree
