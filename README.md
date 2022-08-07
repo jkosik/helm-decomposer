@@ -20,11 +20,5 @@ Usage of ./helm-decomposer:
 
 ## TODO
 - Submitted Helm Chart must be healthy, i.e. Helm templating must end up without any warnings. Edge case hit when Helm chart uses dependency aliases combined with subchart parametrized on parent level only.
-- including images into the visal chart hierarchy 
-
-
-## Notes
-- templating works on all levels
-- aliased deps not working with Engine
-
+- including images into the visual chart hierarchy 
 

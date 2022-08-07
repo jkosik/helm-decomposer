@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -15,30 +16,21 @@ import (
 
 func main() {
 
-	inputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit tar.gz or folder name.")
-	outputFile := flag.Bool("o", false, "Write output to helm-decomposer-output.md. (default \"false\")")
-	processImages := flag.Bool("i", false, "Inspect images used in the Helm Chart. (default \"false\")")
+	flagInputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit tar.gz or folder name.")
+	flagOutputFile := flag.Bool("o", false, "Write output to helm-decomposer-output.md. (default \"false\")")
+	flagDetectImages := flag.Bool("i", false, "Inspect images used in the Helm Chart. (default \"false\")")
 
 	flag.Parse()
 
-	fmt.Println(*inputChart)
-	fmt.Println(*outputFile)
-	fmt.Println(*processImages)
-
-	fmt.Printf("\nLoading Helm Chart \"%s\"...\n", *inputChart)
-	loadedChart, err := loader.Load(*inputChart)
+	fmt.Printf("\nLoading Helm Chart \"%s\"...\n", *flagInputChart)
+	loadedChart, err := loader.Load(*flagInputChart)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("\nPopulating Helm Values...")
 
-	// colVals, err := chartutil.CoalesceValues(loadedChart, map[string]interface{}{})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
 	releaseOptions := chartutil.ReleaseOptions{Name: "release1", Namespace: "ns1"}
-	// Submitting empty map param {}{}
 	vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
 		releaseOptions, chartutil.DefaultCapabilities)
 
@@ -47,17 +39,33 @@ func main() {
 
 	fmt.Println("\nHelm Templating...")
 
-	// Templated Chart represented by "m" (map[string]string)
-	// where keys are the filenames and values are the file contents
-	m, err := engine.Render(loadedChart, vals)
+	// engine.Render can not work with Helm aliases directly.
+	// Must be preceeded by Run method to composue umbrella Chart Type.
+	actionConfig := new(action.Configuration)
+	client := action.NewInstall(actionConfig)
+
+	client.ClientOnly = true
+	client.Namespace = "n1"
+	client.ReleaseName = "release1"
+	client.DryRun = true
+
+	rel, err := client.Run(loadedChart, vals)
+	if err != nil {
+		panic(err)
+	}
+
+	// Rendering Umbrella Helm Chart to map[string]string
+	// where KEYS are the filenames and VALUES are the file contents
+	m, err := engine.Render(rel.Chart, vals)
 	if err != nil {
 		log.Println(err)
 		fmt.Println("\nWARNING: Helm Chart can not be fully templated. Please check values files on all levels, usage of aliases, etc...")
 	}
-	fmt.Println("Templated manifests: \n", m)
+	// fmt.Println("Templated manifests: \n", m)
 
-	// Detect images in the Chart structure
-	detectImages(m)
+	if *flagDetectImages {
+		detectImages(m) // TODO: WRONG TYPE. we need map[string]string
+	}
 
 	// Build visual tree of Chart dependencies
 	fmt.Printf("\nBuilding Tree for the Helm Chart Tree: \"%s\"...\n", loadedChart.Name())
@@ -117,7 +125,7 @@ func main() {
 	fmt.Println("\n=== Helm Tree: ===\n")
 
 	// If output file needed
-	if *outputFile {
+	if *flagOutputFile {
 		f, err := os.Create("helm-decomposer-output.md")
 		if err != nil {
 			log.Fatal(err)
