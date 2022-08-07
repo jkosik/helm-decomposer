@@ -1,11 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
-	"strings"
 
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -13,71 +13,39 @@ import (
 	"helm.sh/helm/v3/pkg/engine"
 )
 
-type tree []node
-
-type node struct {
-	label    string
-	children []int // indexes into tree
-}
-
-func vis(t tree) {
-	if len(t) == 0 {
-		fmt.Println("<empty>")
-		return
-	}
-	var f func(int, string)
-	f = func(n int, pre string) {
-		ch := t[n].children
-		if len(ch) == 0 {
-			fmt.Println("╴", t[n].label)
-			return
-		}
-		fmt.Println("┐", t[n].label)
-		last := len(ch) - 1
-		for _, ch := range ch[:last] {
-			fmt.Print(pre, "├─")
-			f(ch, pre+"│ ")
-		}
-		fmt.Print(pre, "└─")
-		f(ch[last], pre+"  ")
-	}
-	f(0, "")
-}
-
 func main() {
 
-	if len(os.Args[1:]) != 1 {
-		log.Fatalf("supply a chart file or directory")
-	}
-	chartPath := os.Args[1]
+	inputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit tar.gz or folder name.")
+	outputFile := flag.Bool("o", false, "Write output to helm-decomposer-output.md. (default \"false\")")
+	processImages := flag.Bool("i", false, "Inspect images used in the Helm Chart. (default \"false\")")
 
-	fmt.Println("\nLoading Helm Chart...")
-	loadedChart, err := loader.Load(chartPath)
+	flag.Parse()
+
+	fmt.Println(*inputChart)
+	fmt.Println(*outputFile)
+	fmt.Println(*processImages)
+
+	fmt.Printf("\nLoading Helm Chart \"%s\"...\n", *inputChart)
+	loadedChart, err := loader.Load(*inputChart)
 	if err != nil {
 		panic(err)
 	}
 
-	//fmt.Println(reflect.TypeOf(loadedChart))
-
 	fmt.Println("\nPopulating Helm Values...")
 
+	// colVals, err := chartutil.CoalesceValues(loadedChart, map[string]interface{}{})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 	releaseOptions := chartutil.ReleaseOptions{Name: "release1", Namespace: "ns1"}
 	// Submitting empty map param {}{}
 	vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
 		releaseOptions, chartutil.DefaultCapabilities)
-	// vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
-	// 	chartutil.ReleaseOptions{}, chartutil.DefaultCapabilities)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	// fmt.Println(vals.YAML())
+	// templatedVals, _ := vals.YAML()
+	// fmt.Println("Templated Values: \n", templatedVals)
 
 	fmt.Println("\nHelm Templating...")
-
-	// Alternative to engine.Render function. Using Render Method outputs trailing nil.
-	// e := engine.Engine{Strict: false, LintMode: false}
-	// fmt.Println(e.Render(loadedChart, vals))
 
 	// Templated Chart represented by "m" (map[string]string)
 	// where keys are the filenames and values are the file contents
@@ -86,47 +54,19 @@ func main() {
 		log.Println(err)
 		fmt.Println("\nWARNING: Helm Chart can not be fully templated. Please check values files on all levels, usage of aliases, etc...")
 	}
-	// fmt.Println(m)
+	fmt.Println("Templated manifests: \n", m)
 
-	fmt.Println("\nBrowsing files found...")
-	// Populate keys (filenames)
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-		// fmt.Println(k)
-	}
+	// Detect images in the Chart structure
+	detectImages(m)
 
-	fmt.Println("\nSearching images in K8S manifests...")
-	// Populate keys (filenames) with "image:" in the file content
-	var filesWithImg []string
-	for _, k := range keys {
-		if strings.Contains(m[k], "image:") {
-			filesWithImg = append(filesWithImg, k)
-			//fmt.Println(m[filesWithImg])
-
-			re := regexp.MustCompile(`image:.*`)
-			linesWithImg := re.FindAllString(m[k], -1)
-
-			if len(linesWithImg) > 0 {
-				fmt.Printf("\nImage found in %s...\n", k)
-			}
-			// fmt.Println(linesWithImg)
-			for _, i := range linesWithImg {
-				image := strings.TrimPrefix(i, "image:")
-				image = strings.TrimSpace(image)
-				image = strings.Trim(image, "\"")
-				fmt.Println(image)
-			}
-		}
-	}
-
+	// Build visual tree of Chart dependencies
 	fmt.Printf("\nBuilding Tree for the Helm Chart Tree: \"%s\"...\n", loadedChart.Name())
 
 	// Closure must be declared to allow recursions later on
 	var depRecursion func(myChart chart.Chart, nodeID int) tree
 
-	// allNodeIDs initialized already to reserve 0 for root.
-	// Appending always dummy value "node". Slice keys act as Node IDs. Length represents Node count.
+	// allNodeIDs initialized already to reserve 0 for root. Needed by vis() in tree.go
+	// Slice keys act as Node IDs. Values are always "dummy". Length represents Node count.
 	allNodeIDs := []string{"node"} // 0: node, 1: node,...
 	fullTree := tree{{label: loadedChart.Name(), children: []int{}}}
 	var currentDepsNodeIDs []int
@@ -144,12 +84,12 @@ func main() {
 		if len(chartDeps) == 0 {
 			// fmt.Println("No dependencies found. Continuing...")
 		} else {
-			// root Node already declared, len == 1
+			// root Node already declared, i.e. len == 1. Child Node IDs are shifted.
 			shift := len(allNodeIDs)
 			for i, dep := range chartDeps {
 				// Composing from scratch slice of child Node IDs for the tested parent.
-				// Node ID == Slice KEY IDs for the zer-based Tree which will be submitted to vis().
-				// currentDepsNodeIDs's VALUES are +1 to KEYS from the Tree
+				// Node ID == allNodeIDs slice KEY IDs.
+				// currentDepsNodeIDs's VALUES are shifted +1 to KEYS from the allNodeIDs
 				currentDepsNodeIDs = append(currentDepsNodeIDs, shift+i) // [1,2,3,4], for the next parent: [5,6,7]...
 
 				// allNodeIDs grows with every new dependencies. Slice keys represent Node IDs (zero-based). Slice length represents Node count.
@@ -175,6 +115,32 @@ func main() {
 	depRecursion(*loadedChart, 0)
 
 	fmt.Println("\n=== Helm Tree: ===\n")
-	vis(fullTree)
+
+	// If output file needed
+	if *outputFile {
+		f, err := os.Create("helm-decomposer-output.md")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		rescueStdout := os.Stdout
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		// Capturing this at stdout
+		vis(fullTree)
+
+		w.Close()
+		out, _ := ioutil.ReadAll(r)
+		os.Stdout = rescueStdout
+		f.Write(out)
+
+		// Print captured
+		fmt.Printf("%s", out)
+
+	} else {
+		vis(fullTree)
+	}
 
 }
