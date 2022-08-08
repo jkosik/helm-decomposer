@@ -13,7 +13,7 @@ go build .
 
 ## Usage
 1. Download any Helm Chart. You will reference it later on.
-2. Run as `./helm-decomposer -chart mychart.tgz
+2. Run as `./helm-decomposer -chart mychart.tgz -i -o`
 ```
 ❯ ./helm-decomposer -h
 Usage of ./helm-decomposer:
