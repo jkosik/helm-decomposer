@@ -26,4 +26,5 @@ Usage of ./helm-decomposer:
 ## Issues
 - Edge case appears when Helm chart uses dependency aliases combined with subchart parametrized on parent level only.
 
-
+## License
+MIT
