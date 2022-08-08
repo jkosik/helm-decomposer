@@ -1,6 +1,9 @@
 ## helm-decomposer
 The tool templates the Helm package (.tgz or untarred folder) identifies all images in use and visualizes tree structure of the Chart and all dependencies (aliased dependencies are merged).
 
+## Demo
+![](readme.gif)
+
 ## Build the binary
 ```
 git clone git@github.com:jkosik/helm-decomposer.git
