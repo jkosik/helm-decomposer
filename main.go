@@ -67,7 +67,7 @@ func main() {
 	}
 
 	// Build visual tree of Chart dependencies
-	fmt.Printf("\nBuilding Tree for the Helm Chart: \"%s\"...\n", loadedChart.Name())
+	fmt.Printf("\n--- Building Tree for the Helm Chart \"%s\" ---\n\n", loadedChart.Name())
 
 	// Closure must be declared to allow recursions later on
 	var depRecursion func(myChart chart.Chart, nodeID int) tree

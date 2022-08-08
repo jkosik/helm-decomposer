@@ -5,14 +5,12 @@ The tool templates the Helm package (.tgz or untarred folder) identifies all ima
 ```
 git clone git@github.com:jkosik/helm-decomposer.git
 cd helm-decomposer
-go mod init github.com/jkosik/helm-decomposer
-go mod tidy
 go build .
 ```
 
 ## Usage
-- Download any Helm Chart. You will reference it later on.
-- Run as `helm-decomposer -chart mychart.tgz
+1. Download any Helm Chart. You will reference it later on.
+2. Run as `./helm-decomposer -chart mychart.tgz
 ```
 ❯ ./helm-decomposer -h
 Usage of ./helm-decomposer:
