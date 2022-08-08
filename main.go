@@ -16,7 +16,7 @@ import (
 
 func main() {
 
-	flagInputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit tar.gz or folder name.")
+	flagInputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit .tgz or folder name.")
 	flagOutputFile := flag.Bool("o", false, "Write output to helm-decomposer-output.md. (default \"false\")")
 	flagDetectImages := flag.Bool("i", false, "Inspect images used in the Helm Chart. (default \"false\")")
 
@@ -28,7 +28,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("\nPopulating Helm Values...")
+	// fmt.Println("\nPopulating Helm Values...")
 
 	releaseOptions := chartutil.ReleaseOptions{Name: "release1", Namespace: "ns1"}
 	vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
@@ -37,15 +37,14 @@ func main() {
 	// templatedVals, _ := vals.YAML()
 	// fmt.Println("Templated Values: \n", templatedVals)
 
-	fmt.Println("\nHelm Templating...")
+	// fmt.Println("\nHelm Templating...")
 
 	// engine.Render can not work with Helm aliases directly.
 	// Must be preceeded by Run method to composue umbrella Chart Type.
 	actionConfig := new(action.Configuration)
 	client := action.NewInstall(actionConfig)
-
 	client.ClientOnly = true
-	client.Namespace = "n1"
+	client.Namespace = "ns1"
 	client.ReleaseName = "release1"
 	client.DryRun = true
 
@@ -54,21 +53,21 @@ func main() {
 		panic(err)
 	}
 
-	// Rendering Umbrella Helm Chart to map[string]string
-	// where KEYS are the filenames and VALUES are the file contents
-	m, err := engine.Render(rel.Chart, vals)
+	// Rendering Umbrella Helm Chart to map[string]string (KEYS are the filenames and VALUES are the file contents)
+	m, err := engine.Render(rel.Chart, vals) // rel.Chart equals fully to loadedChart. Both can be used
 	if err != nil {
 		log.Println(err)
 		fmt.Println("\nWARNING: Helm Chart can not be fully templated. Please check values files on all levels, usage of aliases, etc...")
 	}
+
 	// fmt.Println("Templated manifests: \n", m)
 
 	if *flagDetectImages {
-		detectImages(m) // TODO: WRONG TYPE. we need map[string]string
+		detectImages(m)
 	}
 
 	// Build visual tree of Chart dependencies
-	fmt.Printf("\nBuilding Tree for the Helm Chart Tree: \"%s\"...\n", loadedChart.Name())
+	fmt.Printf("\nBuilding Tree for the Helm Chart: \"%s\"...\n", loadedChart.Name())
 
 	// Closure must be declared to allow recursions later on
 	var depRecursion func(myChart chart.Chart, nodeID int) tree
@@ -121,8 +120,6 @@ func main() {
 	}
 
 	depRecursion(*loadedChart, 0)
-
-	fmt.Println("\n=== Helm Tree: ===\n")
 
 	// If output file needed
 	if *flagOutputFile {
