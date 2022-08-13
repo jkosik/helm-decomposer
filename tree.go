@@ -14,7 +14,9 @@ func vis(t tree) {
 		fmt.Println("<empty>")
 		return
 	}
+
 	var f func(int, string)
+
 	f = func(n int, pre string) {
 		ch := t[n].children
 		if len(ch) == 0 {
@@ -30,5 +32,6 @@ func vis(t tree) {
 		fmt.Print(pre, "└─")
 		f(ch[last], pre+"  ")
 	}
+
 	f(0, "")
 }

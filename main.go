@@ -28,19 +28,12 @@ func main() {
 		panic(err)
 	}
 
-	// fmt.Println("\nPopulating Helm Values...")
-
 	releaseOptions := chartutil.ReleaseOptions{Name: "release1", Namespace: "ns1"}
 	vals, err := chartutil.ToRenderValues(loadedChart, map[string]interface{}{},
 		releaseOptions, chartutil.DefaultCapabilities)
 
-	// templatedVals, _ := vals.YAML()
-	// fmt.Println("Templated Values: \n", templatedVals)
-
-	// fmt.Println("\nHelm Templating...")
-
 	// engine.Render can not work with Helm aliases directly.
-	// Must be preceeded by Run method to composue umbrella Chart Type.
+	// Must be preceeded by Run method to compose umbrella Chart Type.
 	actionConfig := new(action.Configuration)
 	client := action.NewInstall(actionConfig)
 	client.ClientOnly = true
@@ -53,26 +46,23 @@ func main() {
 		panic(err)
 	}
 
-	// Rendering Umbrella Helm Chart to map[string]string (KEYS are the filenames and VALUES are the file contents)
+	// Rendering Umbrella Helm Chart to m (map[string]string) where KEY is the filenames and VALUE is the file contents
 	m, err := engine.Render(rel.Chart, vals) // rel.Chart equals fully to loadedChart. Both can be used
 	if err != nil {
 		log.Println(err)
 		fmt.Println("\nWARNING: Helm Chart can not be fully templated. Please check values files on all levels, usage of aliases, etc...")
 	}
 
-	// fmt.Println("Templated manifests: \n", m)
-
 	if *flagDetectImages {
 		detectImages(m)
 	}
 
-	// Build visual tree of Chart dependencies
 	fmt.Printf("\n--- Building Tree for the Helm Chart \"%s\" ---\n\n", loadedChart.Name())
 
 	// Closure must be declared to allow recursions later on
 	var depRecursion func(myChart chart.Chart, nodeID int) tree
 
-	// allNodeIDs initialized already to reserve 0 for root. Needed by vis() in tree.go
+	// allNodeIDs initialized already to reserve 0 for root node. Needed by vis() in tree.go
 	// Slice keys act as Node IDs. Values are always "dummy". Length represents Node count.
 	allNodeIDs := []string{"node"} // 0: node, 1: node,...
 	fullTree := tree{{label: loadedChart.Name(), children: []int{}}}
@@ -91,15 +81,14 @@ func main() {
 		if len(chartDeps) == 0 {
 			// fmt.Println("No dependencies found. Continuing...")
 		} else {
-			// root Node already declared, i.e. len == 1. Child Node IDs are shifted.
+			// root Node already declared, i.e. len(allNodeIDs) == 1. Child Node IDs are shifted.
 			shift := len(allNodeIDs)
 			for i, dep := range chartDeps {
-				// Composing from scratch slice of child Node IDs for the tested parent.
-				// Node ID == allNodeIDs slice KEY IDs.
-				// currentDepsNodeIDs's VALUES are shifted +1 to KEYS from the allNodeIDs
+				// Node ID == allNodeIDs's KEY IDs.
+				// currentDepsNodeIDs's VALUES are shifted +1 to continue after allNodeIDs keys
 				currentDepsNodeIDs = append(currentDepsNodeIDs, shift+i) // [1,2,3,4], for the next parent: [5,6,7]...
 
-				// allNodeIDs grows with every new dependencies. Slice keys represent Node IDs (zero-based). Slice length represents Node count.
+				// allNodeIDs keys grows with every new dependencies. "node" is just a dummy value. Keys matter.
 				allNodeIDs = append(allNodeIDs, "node")
 
 				// fmt.Printf("New Node \"%s\" (Node ID: %d) added to the Tree. Current Node count: %d \n", dep.Name(), shift+i, len(allNodeIDs))
@@ -107,13 +96,12 @@ func main() {
 			}
 
 			// fmt.Printf("New Tree state: %v \n", fullTree)
-			fullTree[nodeID] = node{label: parent, children: currentDepsNodeIDs} // NodeID initially passed to the function
+			fullTree[nodeID] = node{label: parent, children: currentDepsNodeIDs}
 			// fmt.Printf("Childrens in Tree updated for Node \"%s\" (Node ID %d): %v \n", parent, nodeID, fullTree)
 
 			for i, dep := range chartDeps {
 				// fmt.Printf("Recursive search for: \"%s\", Node ID: %d\n", dep.Name(), shift+i)
 				depRecursion(*dep, shift+i)
-				//time.Sleep(100 * time.Millisecond)
 			}
 		}
 		return fullTree
@@ -121,7 +109,6 @@ func main() {
 
 	depRecursion(*loadedChart, 0)
 
-	// If output file needed
 	if *flagOutputFile {
 		f, err := os.Create("helm-decomposer-output.md")
 		if err != nil {
