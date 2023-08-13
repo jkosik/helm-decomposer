@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"encoding/json"
-    	"os"
 )
 
 func unique(strSlice []string) []string {
@@ -21,7 +19,7 @@ func unique(strSlice []string) []string {
 	return list
 }
 
-func detectImages(m map[string]string) {
+func detectImages(m map[string]string) []string{
 	fmt.Println("\n--- Searching images in K8S manifests ---")
 	// Populate keys (filenames)
 	keys := make([]string, 0, len(m))
@@ -69,20 +67,5 @@ func detectImages(m map[string]string) {
 		fmt.Println("\u2192", i)
 	}
 
-	imageDict := map[string][]string{"images": uniqueImageList}
-
-	jsonFile, err := os.Create("images.json")
-    	if err != nil {
-		fmt.Println(err)
-		return
-    	}
-    	defer jsonFile.Close()
-
-    	encoder := json.NewEncoder(jsonFile)
-    	err = encoder.Encode(imageDict)
-    	if err != nil {
-		fmt.Println(err)
-		return
-    	}
-
+	return uniqueImageList
 }
