@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"encoding/json"
+    	"os"
 )
 
 func unique(strSlice []string) []string {
@@ -66,5 +68,21 @@ func detectImages(m map[string]string) {
 	for _, i := range uniqueImageList {
 		fmt.Println("\u2192", i)
 	}
+
+	imageDict := map[string][]string{"images": uniqueImageList}
+
+	jsonFile, err := os.Create("images.json")
+    	if err != nil {
+		fmt.Println(err)
+		return
+    	}
+    	defer jsonFile.Close()
+
+    	encoder := json.NewEncoder(jsonFile)
+    	err = encoder.Encode(imageDict)
+    	if err != nil {
+		fmt.Println(err)
+		return
+    	}
 
 }
