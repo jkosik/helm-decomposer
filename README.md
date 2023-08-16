@@ -13,14 +13,15 @@ go build .
 
 ## Usage
 1. Download any Helm Chart. You will reference it later on.
-2. Run as `./helm-decomposer -chart mychart.tgz -i -o`
+2. Run as `./helm-decomposer -chart mychart.tgz -ij -o`
 ```
 ❯ ./helm-decomposer -h
 Usage of ./helm-decomposer:
   -chart string
         Helm Chart to process. Submit tar.gz or folder name. (default "samples/nginx")
-  -i    Inspect images used in the Helm Chart. (default "false")
-  -o    Write output to helm-decomposer-output.md. (default "false")
+  -o     Write output to helm-decomposer-output.md. (default "false")
+  -ij    Write output to images.json. (default "false")
+  -iy    Write output to images.yaml. (default "false")
 ```
 
 ## Issues

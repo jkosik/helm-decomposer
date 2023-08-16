@@ -19,7 +19,7 @@ func unique(strSlice []string) []string {
 	return list
 }
 
-func detectImages(m map[string]string) {
+func detectImages(m map[string]string) []string{
 	fmt.Println("\n--- Searching images in K8S manifests ---")
 	// Populate keys (filenames)
 	keys := make([]string, 0, len(m))
@@ -67,4 +67,5 @@ func detectImages(m map[string]string) {
 		fmt.Println("\u2192", i)
 	}
 
+	return uniqueImageList
 }

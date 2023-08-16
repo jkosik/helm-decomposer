@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"encoding/json"
+	"gopkg.in/yaml.v3"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -18,7 +20,8 @@ func main() {
 
 	flagInputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit .tgz or folder name.")
 	flagOutputFile := flag.Bool("o", false, "Write output to helm-decomposer-output.md. (default \"false\")")
-	flagDetectImages := flag.Bool("i", false, "Inspect images used in the Helm Chart. (default \"false\")")
+	flagGenerateJson := flag.Bool("ij", false, "Write output to images.json. (default \"false\")")
+	flagGenerateYaml := flag.Bool("iy", false, "Write output to images.yaml. (default \"false\")")
 
 	flag.Parse()
 
@@ -53,8 +56,53 @@ func main() {
 		fmt.Println("\nWARNING: Helm Chart can not be fully templated. Please check values files on all levels, usage of aliases, etc...")
 	}
 
-	if *flagDetectImages {
-		detectImages(m)
+	// generate json from the list of images obtained from DetectImages
+	if *flagGenerateJson {
+		
+		// use uniqueImageList from images.go to generate JSON & YAML
+		uniqueImageList := detectImages(m)
+		imageDict := map[string][]string{"images": uniqueImageList}
+		
+		fmt.Printf("\n--- Generating image list as JSON ---")
+		// write to file images.json
+		jsonFile, err := os.Create("images.json")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer jsonFile.Close()
+
+		encoder := json.NewEncoder(jsonFile)
+		err = encoder.Encode(imageDict)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("\n--- File saved to images.json ---")
+	}
+
+	// generate Yaml from the list of images obtained from DetectImages
+	if *flagGenerateYaml {
+		// use uniqueImageList from images.go to generate JSON & YAML
+		uniqueImageList := detectImages(m)
+		imageDict := map[string][]string{"images": uniqueImageList}
+		
+		fmt.Printf("\n--- Generating image list as YAML ---")
+		// write to file images.yaml
+		yamlFile, err := os.Create("images.yaml")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer yamlFile.Close()
+
+		encoder := yaml.NewEncoder(yamlFile)
+		err = encoder.Encode(imageDict)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("\n--- File saved to images.yaml ---")
 	}
 
 	fmt.Printf("\n--- Building Tree for the Helm Chart \"%s\" ---\n\n", loadedChart.Name())
