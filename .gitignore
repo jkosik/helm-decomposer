@@ -1,3 +1,10 @@
 .vscode/*
 samples/*
+
+# binary
+helm-decomposer
+
+# output files
 helm-decomposer-output.md
+images.json
+images.yaml

@@ -1,12 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"encoding/json"
+
 	"gopkg.in/yaml.v3"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -19,9 +20,9 @@ import (
 func main() {
 
 	flagInputChart := flag.String("chart", "sample-helm-charts/nginx", "Helm Chart to process. Submit .tgz or folder name.")
-	flagOutputFile := flag.Bool("o", false, "Write output to helm-decomposer-output.md. (default \"false\")")
-	flagGenerateJson := flag.Bool("ij", false, "Write output to images.json. (default \"false\")")
-	flagGenerateYaml := flag.Bool("iy", false, "Write output to images.yaml. (default \"false\")")
+	flagOutputFile := flag.Bool("o", false, "Write Helm Chart tree to helm-decomposer-output.md. (default \"false\")")
+	flagGenerateJson := flag.Bool("ij", false, "Write image list to images.json. (default \"false\")")
+	flagGenerateYaml := flag.Bool("iy", false, "Write image list to images.yaml. (default \"false\")")
 
 	flag.Parse()
 
@@ -58,11 +59,11 @@ func main() {
 
 	// generate json from the list of images obtained from DetectImages
 	if *flagGenerateJson {
-		
+
 		// use uniqueImageList from images.go to generate JSON & YAML
 		uniqueImageList := detectImages(m)
 		imageDict := map[string][]string{"images": uniqueImageList}
-		
+
 		fmt.Printf("\n--- Generating image list as JSON ---")
 		// write to file images.json
 		jsonFile, err := os.Create("images.json")
@@ -86,7 +87,7 @@ func main() {
 		// use uniqueImageList from images.go to generate JSON & YAML
 		uniqueImageList := detectImages(m)
 		imageDict := map[string][]string{"images": uniqueImageList}
-		
+
 		fmt.Printf("\n--- Generating image list as YAML ---")
 		// write to file images.yaml
 		yamlFile, err := os.Create("images.yaml")
