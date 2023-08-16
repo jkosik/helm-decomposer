@@ -2,7 +2,7 @@
 The tool templates the Helm package (.tgz or untarred folder) identifies all images in use and visualizes tree structure of the Chart.
 
 ## Demo
-![](readme/readme.gif)
+![](readme/readme.mp4)
 
 ## Build the binary
 ```
